@@ -22,6 +22,7 @@ static BOOL VisualizeWhitespaceCharacters;
 static BOOL AllowEmptyInput;
 static BOOL MatchFromBeginning;
 static BOOL ScoreFirstMatchedPosition;
+static BOOL AutoSelectSingleChoice;
 
 static NSString* LastQueryString;
 static int LastCursorPos;
@@ -584,6 +585,13 @@ static NSString* ScriptAtList;
     // push choice back to start
     self.choice = 0;
     [self reflectChoice];
+
+    // if there's only one choice, and AutoSelectSingleChoice is enabled, pick
+    // this choice and exit the app
+    if (AutoSelectSingleChoice && [self.filteredSortedChoices count] == 1) {
+        self.choice = 0;
+        [self choose];
+    }
 }
 
 /******************************************************************************/
@@ -843,6 +851,7 @@ static void usage(const char* name) {
     printf(" -o           given a query, outputs results to standard output\n");
     printf(" -z           search matches symbols from beginning (instead of from end by weird default)\n");
     printf(" -a           rank early matches higher\n");
+    printf(" -1           if there's only one element, select it automatically\n");
     exit(0);
 }
 
@@ -876,13 +885,14 @@ int main(int argc, const char * argv[]) {
         SDNumRows = 10;
         SDReturnStringOnMismatch = NO;
         SDPercentWidth = -1;
+        AutoSelectSingleChoice = NO;
 
         static SDAppDelegate* delegate;
         delegate = [[SDAppDelegate alloc] init];
         [NSApp setDelegate: delegate];
 
         int ch;
-        while ((ch = getopt(argc, (char**)argv, "lvyezaf:s:r:c:b:n:w:p:q:r:t:x:o:hium")) != -1) {
+        while ((ch = getopt(argc, (char**)argv, "lvyezaf:s:r:c:b:n:w:p:q:r:t:x:o:hium1")) != -1) {
             switch (ch) {
                 case 'i': SDReturnsIndex = YES; break;
                 case 'f': queryFontName = optarg; break;
@@ -904,6 +914,7 @@ int main(int argc, const char * argv[]) {
                 case 'z': MatchFromBeginning = YES; break;
                 case 'a': ScoreFirstMatchedPosition = YES; break;
                 case 'o': queryStdout(delegate, optarg); break;
+                case '1': AutoSelectSingleChoice = YES; break;
                 case '?':
                 case 'h':
                 default:
