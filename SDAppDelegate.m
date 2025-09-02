@@ -327,6 +327,11 @@ static NSString* ScriptAtList;
     }
 }
 
+
+- (void) setCursorAtEndOfQueryField {
+    [[self.queryField currentEditor] setSelectedRange: NSMakeRange(self.queryField.stringValue.length, 0)];
+}
+
 - (void) setupQueryField:(NSRect)textRect {
     NSRect iconRect, space;
     NSDivideRect(textRect, &iconRect, &textRect, NSHeight(textRect) / 1.25, NSMinXEdge);
@@ -357,6 +362,10 @@ static NSString* ScriptAtList;
     [self.queryField setAction: @selector(choose:)];
     [[self.queryField cell] setSendsActionOnEndEditing: NO];
     [[self.window contentView] addSubview: self.queryField];
+
+    // schedule to set cursor position after a delay, after the main run loop
+    // has completed its initial cycle
+    [self performSelector:@selector(setCursorAtEndOfQueryField) withObject:nil afterDelay:0.0];
 }
 
 - (void) getFrameForWindow:(NSRect*)winRect queryField:(NSRect*)textRect divider:(NSRect*)dividerRect tableView:(NSRect*)listRect {
