@@ -23,6 +23,7 @@ static BOOL AllowEmptyInput;
 static BOOL MatchFromBeginning;
 static BOOL ScoreFirstMatchedPosition;
 static BOOL AutoSelectSingleChoice;
+static BOOL MatchWords;
 
 static NSString* LastQueryString;
 static int LastCursorPos;
@@ -73,7 +74,7 @@ static NSString* ScriptAtList;
 @property NSMutableIndexSet* indexSet;
 @property NSMutableAttributedString* displayString;
 
-@property BOOL hasAllCharacters;
+@property BOOL isMatchForQuery;
 @property int score;
 
 @end
@@ -133,13 +134,47 @@ static NSString* ScriptAtList;
 - (void) analyze:(NSString*)query {
 
     // TODO: might not need this variable?
-    self.hasAllCharacters = NO;
+    self.isMatchForQuery = NO;
 
     [self.indexSet removeAllIndexes];
     BOOL foundAll = YES;
     __block int firstOccurenceScore = 0;
 
-    if (MatchFromBeginning) {
+    if (MatchWords) {
+
+		NSArray *queryWords = [query componentsSeparatedByString:@" "];
+        NSRange searchRange = NSMakeRange(0, self.normalized.length);
+        BOOL isFirstWord = YES;
+		for (NSString *word in queryWords) {
+
+			if (word.length == 0) {
+				continue; // Skip empty strings if query contains multiple continuous spaces
+			}
+
+			NSRange foundRange = [self.normalized rangeOfString:word options:0 range:searchRange];
+            
+			if (foundRange.location != NSNotFound) {
+
+				searchRange.location = foundRange.location + foundRange.length;
+				searchRange.length = self.normalized.length - searchRange.location;
+
+                [self.indexSet addIndexesInRange:foundRange];
+
+                if (isFirstWord) {
+                    firstOccurenceScore = -foundRange.location;
+                }
+
+            } else {
+
+                foundAll = NO;
+                break;
+            }
+
+            isFirstWord = NO;
+        }
+
+    }
+    else if (MatchFromBeginning) {
         NSUInteger firstPos = 0;
         for (NSInteger i = 0; i < [query length]; i++) {
             unichar qc = [query characterAtIndex: i];
@@ -190,10 +225,10 @@ static NSString* ScriptAtList;
         firstOccurenceScore = 0;
     }
 
-    self.hasAllCharacters = foundAll;
+    self.isMatchForQuery = foundAll;
 
     // skip the rest when it won't be used by the caller
-    if (!self.hasAllCharacters)
+    if (!self.isMatchForQuery)
         return;
 
     // update score
@@ -561,7 +596,7 @@ static NSString* ScriptAtList;
 
         // filter out non-matches
         for (SDChoice* choice in [self.filteredSortedChoices copy]) {
-            if (!choice.hasAllCharacters)
+            if (!choice.isMatchForQuery)
                 [self.filteredSortedChoices removeObject: choice];
         }
 
@@ -861,6 +896,7 @@ static void usage(const char* name) {
     printf(" -z           search matches symbols from beginning (instead of from end by weird default)\n");
     printf(" -a           rank early matches higher\n");
     printf(" -1           if there's only one element, select it automatically\n");
+    printf(" -W           match words (rather than characters) from the query field\n");
     exit(0);
 }
 
@@ -895,13 +931,14 @@ int main(int argc, const char * argv[]) {
         SDReturnStringOnMismatch = NO;
         SDPercentWidth = -1;
         AutoSelectSingleChoice = NO;
+        MatchWords = NO;
 
         static SDAppDelegate* delegate;
         delegate = [[SDAppDelegate alloc] init];
         [NSApp setDelegate: delegate];
 
         int ch;
-        while ((ch = getopt(argc, (char**)argv, "lvyezaf:s:r:c:b:n:w:p:q:r:t:x:o:hium1")) != -1) {
+        while ((ch = getopt(argc, (char**)argv, "lvyezaf:s:r:c:b:n:w:p:q:r:t:x:o:hium1W")) != -1) {
             switch (ch) {
                 case 'i': SDReturnsIndex = YES; break;
                 case 'f': queryFontName = optarg; break;
@@ -924,6 +961,7 @@ int main(int argc, const char * argv[]) {
                 case 'a': ScoreFirstMatchedPosition = YES; break;
                 case 'o': queryStdout(delegate, optarg); break;
                 case '1': AutoSelectSingleChoice = YES; break;
+                case 'W': MatchWords = YES; break;
                 case '?':
                 case 'h':
                 default:
