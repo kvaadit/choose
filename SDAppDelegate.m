@@ -24,6 +24,7 @@ static BOOL MatchFromBeginning;
 static BOOL ScoreFirstMatchedPosition;
 static BOOL AutoSelectSingleChoice;
 static BOOL MatchWords;
+static BOOL SortMatches;
 
 static NSString* LastQueryString;
 static int LastCursorPos;
@@ -234,6 +235,9 @@ static NSString* ScriptAtList;
     // update score
 
     self.score = 0;
+
+    if (!SortMatches)
+        return;
 
     if ([self.indexSet count] == 0)
         return;
@@ -601,11 +605,13 @@ static NSString* ScriptAtList;
         }
 
         // sort remainder
-        [self.filteredSortedChoices sortUsingComparator:^NSComparisonResult(SDChoice* a, SDChoice* b) {
-            if (a.score > b.score) return NSOrderedAscending;
-            if (a.score < b.score) return NSOrderedDescending;
-            return NSOrderedSame;
-        }];
+        if (SortMatches) {
+            [self.filteredSortedChoices sortUsingComparator:^NSComparisonResult(SDChoice* a, SDChoice* b) {
+                if (a.score > b.score) return NSOrderedAscending;
+                if (a.score < b.score) return NSOrderedDescending;
+                return NSOrderedSame;
+            }];
+        }
 
     }
 }
@@ -897,6 +903,7 @@ static void usage(const char* name) {
     printf(" -a           rank early matches higher\n");
     printf(" -1           if there's only one element, select it automatically\n");
     printf(" -W           match words (rather than characters) from the query field\n");
+    printf(" -S           do not sort matches (ie, present them in the same order they appeared in the input)\n");
     exit(0);
 }
 
@@ -932,13 +939,14 @@ int main(int argc, const char * argv[]) {
         SDPercentWidth = -1;
         AutoSelectSingleChoice = NO;
         MatchWords = NO;
+        SortMatches = YES;
 
         static SDAppDelegate* delegate;
         delegate = [[SDAppDelegate alloc] init];
         [NSApp setDelegate: delegate];
 
         int ch;
-        while ((ch = getopt(argc, (char**)argv, "lvyezaf:s:r:c:b:n:w:p:q:r:t:x:o:hium1W")) != -1) {
+        while ((ch = getopt(argc, (char**)argv, "lvyezaf:s:r:c:b:n:w:p:q:r:t:x:o:hium1WS")) != -1) {
             switch (ch) {
                 case 'i': SDReturnsIndex = YES; break;
                 case 'f': queryFontName = optarg; break;
@@ -962,6 +970,7 @@ int main(int argc, const char * argv[]) {
                 case 'o': queryStdout(delegate, optarg); break;
                 case '1': AutoSelectSingleChoice = YES; break;
                 case 'W': MatchWords = YES; break;
+                case 'S': SortMatches = NO; break;
                 case '?':
                 case 'h':
                 default:
