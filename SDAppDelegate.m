@@ -25,6 +25,7 @@ static BOOL ScoreFirstMatchedPosition;
 static BOOL AutoSelectSingleChoice;
 static BOOL MatchWords;
 static BOOL SortMatches;
+static BOOL Password;
 
 static NSString* LastQueryString;
 static int LastCursorPos;
@@ -356,7 +357,7 @@ static CaseSpecification SearchCase;
 //    [icon setImageFrameStyle: NSImageFrameButton];
     [[self.window contentView] addSubview: icon];
 
-    self.queryField = [[NSTextField alloc] initWithFrame: textRect];
+    self.queryField = Password ? [[NSSecureTextField alloc] initWithFrame: textRect] : [[NSTextField alloc] initWithFrame: textRect];
     [self.queryField setAutoresizingMask: NSViewWidthSizable | NSViewMinYMargin ];
     [self.queryField setDelegate: self];
     [self.queryField setStringValue: InitialQuery];
@@ -981,6 +982,7 @@ static void usage(const char* name) {
     printf(" -u           disable underline and use background for matched string\n");
     printf(" -m           return the query string in case it doesn't match any item\n");
     printf(" -p           defines a prompt to be displayed when query field is empty\n");
+    printf(" -P           conceals keyboard input / password mode (implies -m, -e and -n 0)\n");
     printf(" -q           defines initial query to start with (empty by default)\n");
     printf(" -r           path to a script to run when typing. Output appended to input field. Two args provided upon run:\n");
     printf("               - the query text from input field\n");
@@ -1056,13 +1058,14 @@ int main(int argc, const char * argv[]) {
         MatchWords = NO;
         SortMatches = YES;
         SearchCase = INSENSITIVE;
+        Password = NO;
 
         static SDAppDelegate* delegate;
         delegate = [[SDAppDelegate alloc] init];
         [NSApp setDelegate: delegate];
 
         int ch;
-        while ((ch = getopt(argc, (char**)argv, "lvyezaf:s:r:c:b:n:w:p:q:r:t:x:o:hium1WSC:")) != -1) {
+        while ((ch = getopt(argc, (char**)argv, "lvyezaf:s:r:c:b:n:w:p:q:r:t:x:o:Phium1WSC:")) != -1) {
             switch (ch) {
                 case 'i': SDReturnsIndex = YES; break;
                 case 'f': queryFontName = optarg; break;
@@ -1075,6 +1078,7 @@ int main(int argc, const char * argv[]) {
                 case 'u': SDUnderlineDisabled = YES; break;
                 case 'm': SDReturnStringOnMismatch = YES; break;
                 case 'p': queryPromptString = optarg; break;
+                case 'P': Password = YES; AllowEmptyInput = YES; SDReturnStringOnMismatch = YES; SDNumRows = 0; break;
                 case 'q': InitialQuery = [NSString stringWithUTF8String: optarg]; break;
                 case 'r': ScriptAtInput = [NSString stringWithUTF8String: optarg]; break;
                 case 't': ScriptAtList = [NSString stringWithUTF8String: optarg]; break;
