@@ -942,7 +942,7 @@ static NSString* Script(NSString* pathToScript, NSString* queryInput, NSString* 
 #else
 
     NSFileHandle* stdinHandle = [NSFileHandle fileHandleWithStandardInput];
-    NSData* inputData = [stdinHandle readDataToEndOfFile];
+    NSData* inputData = Password ? nil : [stdinHandle readDataToEndOfFile];
     NSString* inputStrings = [[[NSString alloc] initWithData:inputData encoding:NSUTF8StringEncoding] stringByTrimmingCharactersInSet: [NSCharacterSet newlineCharacterSet]];
 
     if ([inputStrings length] == 0 && !AllowEmptyInput)
